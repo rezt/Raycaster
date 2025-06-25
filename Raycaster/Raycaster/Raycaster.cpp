@@ -5,7 +5,9 @@
 #define P3 3*PI/2
 #define DR 0.01745329251994329576 // Degrees to Radians conversion factor
 
-float px, py, pdx, pdy, pa; // Player position
+typedef struct {
+	float x, y, dx, dy, angle;
+} Player; Player player;
 
 typedef struct {
 	int w, a, s, d;
@@ -24,16 +26,16 @@ void drawPlayer()
 {
 	glColor3f(0.8, 0.2, 0.2);
 	glBegin(GL_QUADS);
-	glVertex2f(px - 10, py - 10);
-	glVertex2f(px + 10, py - 10);
-	glVertex2f(px + 10, py + 10);
-	glVertex2f(px - 10, py + 10);
+	glVertex2f(player.x - 10, player.y - 10);
+	glVertex2f(player.x + 10, player.y - 10);
+	glVertex2f(player.x + 10, player.y + 10);
+	glVertex2f(player.x - 10, player.y + 10);
 	glEnd();
 
 	glLineWidth(3);
 	glBegin(GL_LINES);
-	glVertex2f(px, py);
-	glVertex2f(px + pdx * 5, py + pdy * 5);
+	glVertex2f(player.x, player.y);
+	glVertex2f(player.x + player.dx * 5, player.y + player.dy * 5);
 	glEnd();
 }
 
@@ -249,36 +251,36 @@ void drawCeiling()
 
 void drawRays3D() {
 	int r, mx, mp, dof; float rx, ry, ra, xo, yo, distT;
-	ra = pa - DR * 30; if (ra < 0) { ra += 2 * PI; } if (ra > 2 * PI) { ra -= 2 * PI; };
+	ra = player.angle - DR * 30; if (ra < 0) { ra += 2 * PI; } if (ra > 2 * PI) { ra -= 2 * PI; };
 	for (r = 0; r < 60; r++) {
 		int vmt = 0, hmt = 0;
 
 		// Horizonal Ray Casting
 		dof = 0;
-		float disH = 1000000, hx = px, hy = py;
+		float disH = 1000000, hx = player.x, hy = player.y;
 		float aTan = -1 / tan(ra);
-		if (ra > PI) { ry = ((int)py / mapS) * mapS - 0.0001; rx = (py - ry) * aTan + px; yo = -mapS; xo = -yo * aTan; }
-		else if (ra < PI) { ry = ((int)py / mapS) * mapS + mapS; rx = (py - ry) * aTan + px; yo = mapS; xo = -yo * aTan; }
-		else { rx = px; ry = py; dof = 8; }
+		if (ra > PI) { ry = ((int)player.y / mapS) * mapS - 0.0001; rx = (player.y - ry) * aTan + player.x; yo = -mapS; xo = -yo * aTan; }
+		else if (ra < PI) { ry = ((int)player.y / mapS) * mapS + mapS; rx = (player.y - ry) * aTan + player.x; yo = mapS; xo = -yo * aTan; }
+		else { rx = player.x; ry = player.y; dof = 8; }
 		while(dof < 8) {
 			mx = (int)(rx / mapS);
 			mp = (int)(ry / mapS);
 			if (mx < 0 || mx >= mapX || mp < 0 || mp >= mapY) { dof = 8; }
-			else if (mapW[mp * mapX + mx] > 0) { hx = rx; hy = ry; disH = distance(px, py, hx, hy); hmt = mapW[mp * mapX + mx]-1; dof = 8; }
+			else if (mapW[mp * mapX + mx] > 0) { hx = rx; hy = ry; disH = distance(player.x, player.y, hx, hy); hmt = mapW[mp * mapX + mx]-1; dof = 8; }
 			else { rx += xo; ry += yo; dof++; }
 		}
 		// Vertical Ray casting
 		dof = 0;
-		float disV = 1000000, vx = px, vy = py;
+		float disV = 1000000, vx = player.x, vy = player.y;
 		float nTan = -tan(ra);
-		if (ra > P2 && ra < P3) { rx = ((int)px / mapS) * mapS - 0.0001; ry = (px - rx) * nTan + py; xo = -mapS; yo = -xo * nTan; }
-		else if (ra < P2 || ra > P3) { rx = ((int)px / mapS) * mapS + mapS; ry = (px - rx) * nTan + py; xo = mapS; yo = -xo * nTan; }
-		else { rx = px; ry = py; dof = 8; }
+		if (ra > P2 && ra < P3) { rx = ((int)player.x / mapS) * mapS - 0.0001; ry = (player.x - rx) * nTan + player.y; xo = -mapS; yo = -xo * nTan; }
+		else if (ra < P2 || ra > P3) { rx = ((int)player.x / mapS) * mapS + mapS; ry = (player.x - rx) * nTan + player.y; xo = mapS; yo = -xo * nTan; }
+		else { rx = player.x; ry = player.y; dof = 8; }
 		while (dof < 8) {
 			mx = (int)(rx / mapS);
 			mp = (int)(ry / mapS);
 			if (mx < 0 || mx >= mapX || mp < 0 || mp >= mapY) { dof = 8; }
-			else if (mapW[mp * mapX + mx] > 0) { vx = rx; vy = ry; disV = distance(px, py, vx, vy); vmt = mapW[mp * mapX + mx]-1; dof = 8; }
+			else if (mapW[mp * mapX + mx] > 0) { vx = rx; vy = ry; disV = distance(player.x, player.y, vx, vy); vmt = mapW[mp * mapX + mx]-1; dof = 8; }
 			else { rx += xo; ry += yo; dof++; }
 		}
 		float shade = 1;
@@ -289,7 +291,7 @@ void drawRays3D() {
 		} else {
 			tmt = vmt;  rx = vx; ry = vy; distT = disV; shade = 0.5;
 		}
-		float ca = pa - ra; if (ca < 0) { ca += 2 * PI; } if (ca > 2 * PI) { ca -= 2 * PI; } distT = distT * cos(ca);
+		float ca = player.angle - ra; if (ca < 0) { ca += 2 * PI; } if (ca > 2 * PI) { ca -= 2 * PI; } distT = distT * cos(ca);
 		float lineHeight = (mapS * 320) / distT; 
 		float ty_step = 32 / lineHeight;
 		float ty_off = 0;
@@ -327,23 +329,23 @@ void display()
 	frame2 = glutGet(GLUT_ELAPSED_TIME);
 	fps = (frame2 - frame1) / 60.0f; frame1 = frame2;
 	
-	if (Keys.a) { pa -= 0.1*fps; if (pa < 0) { pa += 2 * PI; } pdx = cos(pa) * 5; pdy = sin(pa) * 5; }
-	if (Keys.d) { pa += 0.1*fps; if (pa > 2 * PI) { pa -= 2 * PI; } pdx = cos(pa) * 5; pdy = sin(pa) * 5; }
+	if (Keys.a) { player.angle -= 0.1*fps; if (player.angle < 0) { player.angle += 2 * PI; } player.dx = cos(player.angle) * 5; player.dy = sin(player.angle) * 5; }
+	if (Keys.d) { player.angle += 0.1*fps; if (player.angle > 2 * PI) { player.angle -= 2 * PI; } player.dx = cos(player.angle) * 5; player.dy = sin(player.angle) * 5; }
 
-	int xo = 0; if (pdx < 0) { xo = -20; } else { xo = 20; }
-	int yo = 0; if (pdy < 0) { yo = -20; } else { yo = 20; }
-	int ipx = px / mapS, ipx_add_xo = (px + xo) / mapS, ipx_sub_xo = (px - xo) / mapS;
-	int ipy = py / mapS, ipy_add_yo = (py + yo) / mapS, ipy_sub_yo = (py - yo) / mapS;
+	int xo = 0; if (player.dx < 0) { xo = -20; } else { xo = 20; }
+	int yo = 0; if (player.dy < 0) { yo = -20; } else { yo = 20; }
+	int ipx = player.x / mapS, ipx_add_xo = (player.x + xo) / mapS, ipx_sub_xo = (player.x - xo) / mapS;
+	int ipy = player.y / mapS, ipy_add_yo = (player.y + yo) / mapS, ipy_sub_yo = (player.y - yo) / mapS;
 
 	if (Keys.w) 
 	{ 
-		if (mapW[ipy*mapX+ipx_add_xo] == 0) { px += pdx * fps; }
-		if (mapW[ipy_add_yo*mapX+ipx] == 0) { py += pdy * fps; }
+		if (mapW[ipy*mapX+ipx_add_xo] == 0) { player.x += player.dx * fps; }
+		if (mapW[ipy_add_yo*mapX+ipx] == 0) { player.y += player.dy * fps; }
 	}
 	if (Keys.s) 
 	{ 
-		if (mapW[ipy * mapX + ipx_sub_xo] == 0) { px -= pdx * fps; }
-		if (mapW[ipy_sub_yo * mapX + ipx] == 0) { py -= pdy * fps; }
+		if (mapW[ipy * mapX + ipx_sub_xo] == 0) { player.x -= player.dx * fps; }
+		if (mapW[ipy_sub_yo * mapX + ipx] == 0) { player.y -= player.dy * fps; }
 	}
 	glutPostRedisplay();
 
@@ -360,7 +362,7 @@ void init()
 {
 	glClearColor(0.3, 0.3, 0.3, 0);
 	gluOrtho2D(0, 1024, 512, 0);
-	px = 300; py = 300; pdx = cos(pa) * 5; pdy = sin(pa) * 5;
+	player.x = 300; player.y = 300; player.dx = cos(player.angle) * 5; player.dy = sin(player.angle) * 5;
 }
 
 
